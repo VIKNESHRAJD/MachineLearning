@@ -1,0 +1,506 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{longtable}
+\usepackage{enumitem}
+
+% Colors for SQL code
+\definecolor{sqlkeyword}{RGB}{0,55,152}
+\definecolor{sqlstring}{RGB}{153,0,0}
+\definecolor{sqlcomment}{RGB}{0,128,0}
+\definecolor{lightgray}{gray}{0.96}
+
+\lstdefinelanguage{OracleSQL}{
+	morekeywords={
+		SELECT,FROM,WHERE,AND,OR,INSERT,INTO,VALUES,UPDATE,SET,DELETE,CREATE,
+		TABLE,ALTER,DROP,VIEW,SEQUENCE,TRIGGER,INDEX,SYNONYM,PRIMARY,KEY,FOREIGN,
+		REFERENCES,NOT,NULL,UNIQUE,ON,FOR,EACH,ROW,AS,BEGIN,END,DECLARE,EXCEPTION,
+		WHEN,THEN,IF,LOOP,WHILE,EXIT,CURSOR,OPEN,FETCH,CLOSE,COMMIT,ROLLBACK,
+		IN,OUT,NUMBER,VARCHAR2,DATE,DBMS_OUTPUT,PUT_LINE,REPLACE,GROUP,BY,HAVING,
+		ORDER,ASC,DESC,JOIN,INNER,LEFT,RIGHT,FULL,NATURAL,USING,LIKE,INTO
+	},
+	sensitive=false,
+	morecomment=[l]{--},
+	morestring=[b]',
+}
+
+\lstset{
+	language=OracleSQL,
+	backgroundcolor=\color{lightgray},
+	keywordstyle=\color{sqlkeyword}\bfseries,
+	commentstyle=\color{sqlcomment}\itshape,
+	stringstyle=\color{sqlstring},
+	basicstyle=\ttfamily\small,
+	numbers=left,
+	numberstyle=\tiny,
+	frame=single,
+	showstringspaces=false,
+	breaklines=true
+}
+
+\title{SQL\\
+	  3 Database Querying \& 4 Index, Views, Sequences, Synonyms}
+\author{Vikki}
+\date{5-11-2025}
+
+\begin{document}
+	\maketitle
+	\tableofcontents
+	\bigskip
+	
+	\section{Intro — Schema and sample data (from INT416 lab)}
+	\noindent We use the lab's tables and sample rows:
+	
+	\begin{itemize}
+		\item \textbf{Product\_Info(Model\_No, Maker, Type)} — master list of models (PC, LP, PR).  
+		\item \textbf{PC(Model\_No, Speed, RAM, HD, CD, Price)} — PC specific details.  
+		\item \textbf{Laptop(Model\_No, Speed, RAM, HD, ScreenSize, Price)} — Laptop table.  
+		\item \textbf{Printer(Model\_No, Color, Type, Price)} — Printer table.
+	\end{itemize}
+	
+	\noindent Example sample rows (used in outputs below):
+	
+	\begin{center}
+		\begin{tabular}{lll}
+			\toprule
+			Product\_Info & Maker & Type \\
+			\midrule
+			PC112 & HCL & PC \\
+			LP113 & HCL & LP \\
+			PR114 & ZENITH & PR \\
+			PC122 & WIPRO & PC \\
+			\bottomrule
+		\end{tabular}
+		\qquad
+		\begin{tabular}{rrrrr}
+			\toprule
+			PC(Model\_No,Speed,RAM,HD,CD,Price) \\
+			\midrule
+			PC112 & 2 & 256 & 60 & 52 & 40000 \\
+			PC122 & 2 & 256 & 60 & 48 & 42000 \\
+			PC132 & 1 & 128 &100 & 68 & 50000 \\
+			PC134 & 1 & 512 &60 & 68 & 80000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\newpage
+	\section{Topic 1 — Database Querying}
+	\subsection{Concept in simple terms}
+	\begin{itemize}[noitemsep]
+		\item \textbf{Simple query:} ask the database for rows/columns (SELECT).  
+		\item \textbf{Subquery / nested:} a query inside another query to use its result.  
+		\item \textbf{Correlated subquery:} subquery that references the outer query row.  
+		\item \textbf{Join:} combine related rows from two or more tables.  
+		\item \textbf{Grouping:} aggregate rows (COUNT, SUM, AVG) per group.  
+		\item \textbf{Update:} change values in existing rows.
+	\end{itemize}
+	
+	\subsection{Syntax and Oracle 21c examples}
+	
+	\subsubsection*{1. Simple SELECT}
+	\begin{lstlisting}[caption={Select all PCs or specific columns}]
+		-- All columns
+		SELECT * FROM PC;
+		
+		-- Specific columns and condition
+		SELECT Model_No, RAM, Price 
+		FROM PC 
+		WHERE RAM = 256;
+	\end{lstlisting}
+	
+	\textbf{Step-by-step execution flow}
+	\begin{enumerate}[noitemsep]
+		\item Parser validates SQL syntax.  
+		\item Optimizer chooses plan (index vs full scan).  
+		\item Executor reads rows and returns results.  
+	\end{enumerate}
+	
+	\textbf{Example output}
+	\begin{center}
+		\begin{tabular}{lrr}
+			\toprule
+			Model\_No & RAM & Price \\
+			\midrule
+			PC112 & 256 & 40000 \\
+			PC122 & 256 & 42000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Real-life use-case:} Show available machines with a specific RAM to a store manager.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item `ORA-00942: table or view does not exist` — wrong schema/table name.  
+		\item `ORA-00904: invalid identifier` — misspelled column.
+		\item Viva: ``What is the role of the optimizer?'' — it chooses efficient plan.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{2. Subquery (non-correlated)}
+	\begin{lstlisting}[caption={Select laptops pricier than average laptop price}]
+		SELECT * FROM Laptop
+		WHERE Price > (SELECT AVG(Price) FROM Laptop);
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item DB evaluates inner subquery `SELECT AVG(Price) FROM Laptop`.  
+		\item Outer query uses that single value as a filter.  
+	\end{enumerate}
+	
+	\textbf{Output (example)}
+	\begin{center}
+		\begin{tabular}{lr}
+			\toprule
+			Model\_No & Price \\
+			\midrule
+			lp133 & 100000 \\
+			lp123 & 72000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Use-case:} Find premium laptops for a sales promotion.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Subquery returns multiple rows where a single-value is expected — use \texttt{IN} instead or aggregate.  
+		\item Viva: ``When does the optimizer rewrite subqueries into joins?'' — when it can be more efficient.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{3. Correlated subquery}
+	\begin{lstlisting}[caption={Laptops priced above the average price for the same speed}]
+		SELECT L1.Model_No, L1.Speed, L1.Price
+		FROM Laptop L1
+		WHERE L1.Price > (
+		SELECT AVG(L2.Price) 
+		FROM Laptop L2 
+		WHERE L2.Speed = L1.Speed
+		);
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item For each row in outer `Laptop L1`, DB evaluates inner query with `L1.Speed`.  
+		\item Compares outer row price to that average — returns row if greater.  
+	\end{enumerate}
+	
+	\textbf{Use-case:} Identify laptops that are expensive for their performance category.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Correlated subqueries can be slow — consider rewrite with JOIN + GROUP BY.  
+		\item Viva: ``Difference between correlated and non-correlated subquery?'' — correlated depends on outer row.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{4. Joins}
+	\begin{lstlisting}[caption={Inner join and Left join examples}]
+		-- Inner join: only matching product_info and pc rows
+		SELECT p.Maker, pc.Model_No, pc.Price
+		FROM Product_Info p
+		JOIN PC pc ON p.Model_No = pc.Model_No;
+		
+		-- Left join: all product_info rows, PC data if any
+		SELECT p.Model_No, p.Maker, pc.Price
+		FROM Product_Info p
+		LEFT JOIN PC pc ON p.Model_No = pc.Model_No;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item DB chooses join algorithm (nested loops, hash, merge).  
+		\item Matches rows according to ON condition, builds result set.
+	\end{enumerate}
+	
+	\textbf{Output (inner join example)}
+	\begin{center}
+		\begin{tabular}{lrr}
+			\toprule
+			Maker & Model\_No & Price \\
+			\midrule
+			HCL & PC112 & 40000 \\
+			WIPRO & PC122 & 42000 \\
+			IBM & PC132 & 50000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Real-life use-case:} Show manufacturer (maker) with model prices in a catalog.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Missing join condition → Cartesian product (huge result).  
+		\item Viva: ``When to use outer joins?'' — when you want unmatched rows from one side included.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{5. Grouping and HAVING}
+	\begin{lstlisting}[caption={Count PCs by RAM and HD groups}]
+		-- Count PCs for each RAM size
+		SELECT RAM, COUNT(*) AS Num_PCs
+		FROM PC
+		GROUP BY RAM;
+		
+		-- HD values with more than 1 PC
+		SELECT HD, COUNT(*) AS Num_PCs
+		FROM PC
+		GROUP BY HD
+		HAVING COUNT(*) > 1;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item DB groups rows by specified column(s).  
+		\item Aggregations (COUNT, AVG) computed per group.  
+		\item HAVING filters groups (applies after GROUP BY).
+	\end{enumerate}
+	
+	\textbf{Output (example)}
+	\begin{center}
+		\begin{tabular}{rr}
+			\toprule
+			RAM & Num\_PCs \\
+			\midrule
+			128 & 1 \\
+			256 & 2 \\
+			512 & 1 \\
+			\bottomrule
+		\end{tabular}
+		\quad
+		\begin{tabular}{rr}
+			\toprule
+			HD & Num\_PCs \\
+			\midrule
+			60 & 3 \\
+			100 & 1 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Use-case:} Inventory summary by configuration.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Using non-aggregated columns in SELECT without putting them in GROUP BY → error in strict SQL modes.  
+		\item Viva: ``Difference between WHERE and HAVING?'' — WHERE filters rows before grouping; HAVING filters groups after grouping.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{6. Update examples}
+	\begin{lstlisting}[caption={Safe updates and transformations}]
+		-- Increase InkJet printers price by 12%
+		UPDATE Printer
+		SET Price = ROUND(Price * 1.12)
+		WHERE Type = 'InkJet';
+		
+		-- Example: Double RAM for each PC and add 10GB to HD
+		UPDATE PC
+		SET RAM = RAM * 2, HD = HD + 10;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item Find rows matching WHERE.  
+		\item Lock rows, compute new values, write changes, generate undo/redo.  
+		\item Commit finalizes changes (if autocommit off).
+	\end{enumerate}
+	
+	\textbf{Output (after updating printer P1)}
+	\begin{center}
+		\begin{tabular}{lrr}
+			\toprule
+			Model\_No & Type & Price \\
+			\midrule
+			PR114 & InkJet & 19040 \\
+			PR124 & Dot   & 12000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Use-case:} Apply vendor price increases across product lines.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Forgetting `WHERE` updates all rows — dangerous. Always `SELECT` first to preview.  
+		\item Lock contention & deadlocks in concurrent updates.  
+		\item Viva: ``How to safely update many rows in production?'' — use batches/transactions and test on a copy first.
+	\end{itemize}
+	
+	\subsection{Quick tips for exam}
+	\begin{itemize}[noitemsep]
+		\item Always preview your `WHERE` with a `SELECT` before `UPDATE/DELETE`.  
+		\item Use aliases (p, pc, l) for readability in joins.  
+		\item For subqueries returning multiple values, use `IN` or aggregate to single value.  
+	\end{itemize}
+	
+	\newpage
+	\section{Topic 2 — Index, Views, Sequences, Synonyms (Oracle 21c)}
+	\subsection{Concept and simple meaning}
+	\begin{itemize}[noitemsep]
+		\item \textbf{Index:} special structure (B-tree, bitmap) to speed lookups (like an index in a book).  
+		\item \textbf{View:} a named query (virtual table) that simplifies complex queries or restricts columns.  
+		\item \textbf{Sequence:} object that generates unique numbers (`NEXTVAL`, `CURRVAL`)—used for surrogate keys.  
+		\item \textbf{Synonym:} alternate name (alias) for a schema object, useful across schemas.
+	\end{itemize}
+	
+	\subsection{Syntax \& Oracle examples (with step-by-step flow)}
+	
+	\subsubsection*{1. Index}
+	\begin{lstlisting}[caption={Create an index on PC.RAM}]
+		-- Create index
+		CREATE INDEX idx_pc_ram ON PC(RAM);
+		
+		-- Drop index if needed
+		DROP INDEX idx_pc_ram;
+	\end{lstlisting}
+	
+	\textbf{Execution flow when index is used in SELECT}
+	\begin{enumerate}[noitemsep]
+		\item Query optimizer sees `WHERE RAM = 256`.  
+		\item Checks available indexes; chooses index scan if selective.  
+		\item Uses index to find row pointers, then fetches full rows from table.  
+	\end{enumerate}
+	
+	\textbf{Real-life use-case:} A website filters products by RAM frequently — index improves response time.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Over-indexing slows INSERT/UPDATE (each index must be updated).  
+		\item Small tables may not benefit from indexes.  
+		\item Viva: ``When will optimizer not use an index?'' — when function is applied on column (e.g., `UPPER(col)`) or low selectivity.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{2. View}
+	\begin{lstlisting}[caption={Create and query a view}]
+		CREATE OR REPLACE VIEW Price_Info AS
+		SELECT p.Model_No, p.Maker, pc.Price
+		FROM Product_Info p
+		JOIN PC pc ON p.Model_No = pc.Model_No;
+		
+		-- Use the view
+		SELECT * FROM Price_Info WHERE Price > 50000;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item View's SELECT is substituted into outer query at execution.  
+		\item DB executes combined query; view does not store data (unless materialized).  
+	\end{enumerate}
+	
+	\textbf{Output (example)}
+	\begin{center}
+		\begin{tabular}{lrr}
+			\toprule
+			Model\_No & Maker & Price \\
+			\midrule
+			PC132 & IBM & 50000 \\
+			PC134 & IBM & 80000 \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\textbf{Use-cases}
+	\begin{itemize}[noitemsep]
+		\item Simplify queries for students/less-privileged users.  
+		\item Provide consistent business view (e.g., product catalog).  
+	\end{itemize}
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Non-updatable views (contain aggregates, GROUP BY, joins) cannot be directly updated.  
+		\item Viva: ``What is a materialized view?'' — stored copy of query results, refreshed periodically.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{3. Sequence}
+	\begin{lstlisting}[caption={Create and use a sequence}]
+		-- Create sequence
+		CREATE SEQUENCE seq_worker START WITH 100 INCREMENT BY 1 NOCACHE NOCYCLE;
+		
+		-- Use it in insert (example for Worker table)
+		INSERT INTO Worker (id, name) VALUES (seq_worker.NEXTVAL, 'John Doe');
+		
+		-- Get current value (after NEXTVAL)
+		SELECT seq_worker.CURRVAL FROM dual;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item `NEXTVAL` returns next available number and advances sequence.  
+		\item `CURRVAL` returns last obtained `NEXTVAL` in the session (error if `NEXTVAL` not called yet).  
+	\end{enumerate}
+	
+	\textbf{Use-case} generate unique primary keys in multi-session environments.
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item `ORA-08002: sequence CURRVAL is not yet defined in this session` — you must call `NEXTVAL` first.  
+		\item Sequence caching can skip numbers after crash — acceptable normally.  
+		\item Viva: ``Difference between `NOCACHE` and `CACHE`?'' — cache improves performance but may skip after instance restart.
+	\end{itemize}
+	
+	\bigskip
+	\subsubsection*{4. Synonym (Oracle)}
+	\begin{lstlisting}[caption={Create and use a synonym}]
+		-- Create public synonym (object available without schema prefix)
+		CREATE PUBLIC SYNONYM G20K FOR your_schema.WorkerSkill;
+		
+		-- Then you can simply:
+		SELECT * FROM G20K;
+	\end{lstlisting}
+	
+	\textbf{Execution flow}
+	\begin{enumerate}[noitemsep]
+		\item Synonym resolves object name to actual schema.table at parse time.  
+		\item DB accesses underlying object as usual.
+	\end{enumerate}
+	
+	\textbf{Use-case} hide schema differences (cross-schema access simplified for users).
+	
+	\textbf{Common errors / viva}
+	\begin{itemize}[noitemsep]
+		\item Synonym points to non-existent object → error when used.  
+		\item Privileges still required on underlying object.  
+		\item Viva: ``Why use a public synonym vs private synonym?'' — public for all users, private per user/schema.
+	\end{itemize}
+	
+	\subsection{Quick best practices and exam tips}
+	\begin{itemize}[noitemsep]
+		\item Use indexes on columns used frequently in WHERE/ORDER BY, but avoid too many indexes.  
+		\item Use views to encapsulate complexity and provide limited column access.  
+		\item Use sequences for robust primary key generation; call `NEXTVAL` in the same `INSERT` statement.  
+		\item Use synonyms to simplify multi-schema queries; remember privileges remain necessary.
+	\end{itemize}
+	
+	\section{Common Viva Questions (Topics 1 \& 2)}
+	\begin{enumerate}[noitemsep]
+		\item Difference between \texttt{WHERE} and \texttt{HAVING}.  
+		\item When should you use an index? When might it not be used?  
+		\item Explain correlated vs non-correlated subquery.  
+		\item How does a view differ from a materialized view?  
+		\item What happens if you forget \texttt{WHERE} in \texttt{UPDATE}? How to prevent it?  
+		\item Why use sequences instead of manual ID generation?  
+		\item What is a mutating table (relevant for triggers later)?  
+		\item Explain `CURRVAL` vs `NEXTVAL` and the `ORA-08002` error cause.
+	\end{enumerate}
+	
+	\vfill
+	\hrule
+	\smallskip
+	\noindent \textbf{Good luck on your lab exam!} \\[4pt]
+	If you want, I can now:
+	\begin{itemize}
+		\item Produce ready-to-run `.sql` scripts (Oracle) for all shown examples with `CREATE TABLE` + sample `INSERT`s plus expected outputs, or
+		\item Make a one-page condensed LaTeX cheat-sheet with only commands + outputs.
+	\end{itemize}
+	
+\end{document}
