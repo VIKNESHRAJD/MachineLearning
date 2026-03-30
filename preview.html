@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Priyadharshini Enterprise Fertilizer Store</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+background:#f5f5f5;
+}
+
+header{
+background:#1a5c2a;
+color:white;
+padding:20px;
+text-align:center;
+}
+
+.products{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+gap:20px;
+padding:40px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+
+.card h3{
+margin:10px 0;
+}
+
+.price{
+color:#1a5c2a;
+font-size:20px;
+font-weight:bold;
+}
+
+button{
+background:#2e8b57;
+border:none;
+color:white;
+padding:10px 20px;
+border-radius:20px;
+cursor:pointer;
+}
+
+button:hover{
+background:#1a5c2a;
+}
+
+.filter{
+text-align:center;
+margin:20px;
+}
+
+.filter button{
+margin:5px;
+}
+
+.cart{
+position:fixed;
+bottom:20px;
+right:20px;
+background:#1a5c2a;
+color:white;
+width:60px;
+height:60px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:24px;
+}
+
+.cart span{
+position:absolute;
+top:-5px;
+right:-5px;
+background:red;
+width:20px;
+height:20px;
+border-radius:50%;
+font-size:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.toast{
+position:fixed;
+bottom:100px;
+right:20px;
+background:#1a5c2a;
+color:white;
+padding:10px 20px;
+border-radius:10px;
+opacity:0;
+transition:0.3s;
+}
+
+.toast.show{
+opacity:1;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Priyadharshini Enterprise</h1>
+<p>Fertilizer & Agro Products Store</p>
+</header>
+
+<div class="filter">
+<button onclick="filterProducts('all')">All</button>
+<button onclick="filterProducts('organic')">Organic</button>
+<button onclick="filterProducts('liquid')">Liquid</button>
+<button onclick="filterProducts('specialty')">Specialty</button>
+</div>
+
+<div class="products" id="products"></div>
+
+<div class="cart">
+🛒
+<span id="cartCount">0</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+let cartCount=0
+
+const products=[
+
+{
+id:1,
+name:"Tata Rallis Bahaar Plant Growth Promoter",
+category:"liquid",
+price:158,
+unit:"100 ml",
+desc:"Improves plant growth and increases crop yield."
+},
+
+{
+id:2,
+name:"Tata Blitox Fungicide Copper Oxychloride 50%",
+category:"specialty",
+price:599,
+unit:"500 g",
+desc:"Controls fungal and bacterial diseases in crops."
+},
+
+{
+id:3,
+name:"Tata Solubor Boron Micronutrient",
+category:"specialty",
+price:320,
+unit:"250 g",
+desc:"Improves flowering fruit setting and crop quality."
+},
+
+{
+id:4,
+name:"Bayer Nativo Fungicide",
+category:"specialty",
+price:850,
+unit:"100 g",
+desc:"Used in rice vegetables and fruits to control fungus."
+},
+
+{
+id:5,
+name:"Bayer Confidor Insecticide",
+category:"specialty",
+price:720,
+unit:"100 ml",
+desc:"Controls sucking pests like aphids and whiteflies."
+},
+
+{
+id:6,
+name:"Bayer Velum Prime Nematicide",
+category:"specialty",
+price:2100,
+unit:"250 ml",
+desc:"Controls nematodes in vegetables and plantation crops."
+},
+
+{
+id:7,
+name:"Tropical Agro TAG NEO Potash Biofertilizer",
+category:"organic",
+price:450,
+unit:"1 kg",
+desc:"Improves soil fertility and potash availability."
+},
+
+{
+id:8,
+name:"Tropical Agro TAG Bio Gold Acetobacter",
+category:"organic",
+price:380,
+unit:"1 kg",
+desc:"Nitrogen fixing bacteria improves crop growth."
+}
+
+]
+
+function renderProducts(filter="all"){
+
+const grid=document.getElementById("products")
+
+let list=products
+
+if(filter!="all"){
+list=products.filter(p=>p.category===filter)
+}
+
+grid.innerHTML=list.map(p=>`
+
+<div class="card">
+
+<h3>${p.name}</h3>
+
+<p>${p.desc}</p>
+
+<div class="price">₹${p.price} / ${p.unit}</div>
+
+<br>
+
+<button onclick="addToCart('${p.name}')">
+Add to Cart
+</button>
+
+</div>
+
+`).join("")
+
+}
+
+function filterProducts(category){
+
+renderProducts(category)
+
+}
+
+function addToCart(name){
+
+cartCount++
+
+document.getElementById("cartCount").innerText=cartCount
+
+showToast(name+" added to cart")
+
+}
+
+function showToast(msg){
+
+const t=document.getElementById("toast")
+
+t.innerText=msg
+
+t.classList.add("show")
+
+setTimeout(()=>{
+t.classList.remove("show")
+},2000)
+
+}
+
+renderProducts()
+
+</script>
+
+</body>
+</html>
