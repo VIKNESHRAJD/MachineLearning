@@ -1,0 +1,28 @@
+1.RC Arduino L293D Motor Driver shield//
+2.TT Gear Motor and wheels set
+3.Servo Motor
+4.IR (Infrared)
+
+
+
+
+*#*#64663#*#*
+
+*#*#426#*#*
+*#*#4636#*#*
+*#*#6485#*#*
+*#60#
+*#*#225#*#*
+*#*#0000#*#*
+
+Neural network
+RNN
+CNN
+GBM 
+
+Decision Tree
+PCA
+    
+
+linear regression
+reinforcement learning
