@@ -2,7 +2,7 @@
 2025
 
 
-Niki Lauda 
+Niki Lauda
 
 
 2026
