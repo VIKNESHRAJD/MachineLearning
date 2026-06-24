@@ -4,5 +4,3 @@
 
 Niki Lauda
 
-
-2026
