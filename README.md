@@ -1,4 +1,1 @@
 # MachineLearning
-
-Niki Lauda
-Milli
